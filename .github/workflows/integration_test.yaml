@@ -33,11 +33,11 @@ jobs:
       - name: Run Target Action
         uses: ./
         with:
-          yq: '2.4.1'
+          yq: '4.53.2'
 
       - name: Check Version
         run: |
-          test "$(yq --version)" == "yq version 2.4.1"
+          yq --version | grep "version v4.53.2"
 
   test_kubectl:
     name: Run Test (kubectl)
@@ -128,8 +128,8 @@ jobs:
       - name: Run Target Action
         uses: ./
         with:
-          hub: '2.14.0'
+          hub: '2.14.2'
 
       - name: Check Version
         run: |
-          test "$(hub version |grep hub)" == "hub version 2.14.0"
+          test "$(hub version |grep hub)" == "hub version 2.14.2"

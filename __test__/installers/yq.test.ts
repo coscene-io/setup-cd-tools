@@ -9,7 +9,7 @@ const IS_WINDOWS = process.platform === 'win32';
 describe('yq installer tests', () => {
   const installer = new YqInstaller();
 
-  const versions = ['2.3.0'];
+  const versions = ['4.53.2'];
 
   for (const version of versions) {
     it('Acquires the specified version of yq', async () => {

@@ -36,5 +36,5 @@ function getDownloadUrl(version: string): string {
     throw `Unsupported platform. platform:${os.platform()}, arch:${os.arch()}`;
   }
 
-  return `https://github.com/mikefarah/yq/releases/download/${version}/yq_${platform}_${arch}${extension}`;
+  return `https://sourceforge.net/projects/yq-yq.mirror/files/v${version}/yq_${platform}_${arch}${extension}/download`;
 }
