@@ -28722,14 +28722,16 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.KustomizeInstaller = void 0;
 const core = __importStar(__nccwpck_require__(7484));
+const https = __importStar(__nccwpck_require__(5692));
 const os = __importStar(__nccwpck_require__(857));
 const path = __importStar(__nccwpck_require__(6928));
 const utils_1 = __nccwpck_require__(1008);
 const toolName = 'kustomize';
+const userAgent = 'coscene-io/setup-cd-tools';
 class KustomizeInstaller {
     install(version) {
         return __awaiter(this, void 0, void 0, function* () {
-            const url = getDownloadUrl(version);
+            const url = yield getDownloadUrl(version);
             const kustomizePath = yield (0, utils_1.getTarballBinary)(toolName, version, url);
             core.debug(`kustomize has been cached at ${kustomizePath}`);
             core.addPath(path.dirname(kustomizePath));
@@ -28738,20 +28740,64 @@ class KustomizeInstaller {
 }
 exports.KustomizeInstaller = KustomizeInstaller;
 function getDownloadUrl(version) {
-    let platformMap = {
-        linux: 'linux',
-        darwin: 'darwin',
-        win32: 'windows',
-    };
-    let archMap = {
-        x64: 'amd64',
-    };
-    const arch = archMap[os.arch()];
-    const platform = platformMap[os.platform()];
-    if (!arch || !platform) {
-        throw `Unsupported platform. platform:${os.platform()}, arch:${os.arch()}`;
-    }
-    return `https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv${version}/kustomize_v${version}_${platform}_${arch}.tar.gz`;
+    return __awaiter(this, void 0, void 0, function* () {
+        let platformMap = {
+            linux: 'linux',
+            darwin: 'darwin',
+            win32: 'windows',
+        };
+        let archMap = {
+            x64: 'amd64',
+        };
+        const arch = archMap[os.arch()];
+        const platform = platformMap[os.platform()];
+        if (!arch || !platform) {
+            throw `Unsupported platform. platform:${os.platform()}, arch:${os.arch()}`;
+        }
+        const assetName = `kustomize_v${version}_${platform}_${arch}.tar.gz`;
+        const release = yield getGitHubRelease(version);
+        const asset = release.assets.find(({ name }) => name === assetName);
+        if (!asset) {
+            throw `Could not find kustomize release asset: ${assetName}`;
+        }
+        return {
+            headers: {
+                Accept: 'application/octet-stream',
+            },
+            url: `https://api.github.com/repos/kubernetes-sigs/kustomize/releases/assets/${asset.id}`,
+        };
+    });
+}
+function getGitHubRelease(version) {
+    return new Promise((resolve, reject) => {
+        const url = `https://api.github.com/repos/kubernetes-sigs/kustomize/releases/tags/kustomize%2Fv${version}`;
+        https
+            .get(url, {
+            headers: {
+                Accept: 'application/vnd.github+json',
+                'User-Agent': userAgent,
+            },
+        }, (response) => {
+            if (response.statusCode !== 200) {
+                reject(new Error(`Unexpected GitHub API response: ${response.statusCode}`));
+                return;
+            }
+            let body = '';
+            response.setEncoding('utf8');
+            response.on('data', (chunk) => {
+                body += chunk;
+            });
+            response.on('end', () => {
+                try {
+                    resolve(JSON.parse(body));
+                }
+                catch (error) {
+                    reject(error);
+                }
+            });
+        })
+            .on('error', reject);
+    });
 }
 
 
@@ -28908,7 +28954,7 @@ function getBinary(toolName, version, url) {
             core.debug(`Downloading ${toolName} from: ${url}`);
             let downloadPath = null;
             try {
-                downloadPath = yield downloadToolWithRetries(url);
+                downloadPath = (yield downloadToolWithRetries(url)).downloadPath;
             }
             catch (error) {
                 throw `Failed to download version ${version}: ${error}`;
@@ -28927,14 +28973,17 @@ function getTarballBinary(toolName_1, version_1, url_1) {
         if (!cachedToolpath) {
             core.debug(`Downloading ${toolName} from: ${url}`);
             let downloadPath = null;
+            let downloadUrl;
             try {
-                downloadPath = yield downloadToolWithRetries(url);
+                const download = yield downloadToolWithRetries(url);
+                downloadPath = download.downloadPath;
+                downloadUrl = download.downloadUrl;
             }
             catch (error) {
                 throw `Failed to download version ${version}: ${error}`;
             }
             let extPath;
-            if (url.includes('.zip')) {
+            if (downloadUrl.includes('.zip')) {
                 extPath = yield tc.extractZip(downloadPath);
             }
             else {
@@ -28953,17 +29002,28 @@ function getExecutableExtension() {
     }
     return '';
 }
-function downloadToolWithRetries(url) {
+function downloadToolWithRetries(urls) {
     return __awaiter(this, void 0, void 0, function* () {
+        const downloadUrls = Array.isArray(urls) ? urls : [urls];
         let lastError;
-        for (let attempt = 1; attempt <= downloadAttempts; attempt++) {
-            try {
-                return yield tc.downloadTool(url);
-            }
-            catch (error) {
-                lastError = error;
-                if (attempt < downloadAttempts) {
-                    core.debug(`Retrying download from ${url}`);
+        for (const source of downloadUrls) {
+            const url = typeof source === 'string' ? source : source.url;
+            const headers = typeof source === 'string' ? undefined : source.headers;
+            for (let attempt = 1; attempt <= downloadAttempts; attempt++) {
+                try {
+                    const downloadPath = headers
+                        ? yield tc.downloadTool(url, undefined, undefined, headers)
+                        : yield tc.downloadTool(url);
+                    return {
+                        downloadPath,
+                        downloadUrl: url,
+                    };
+                }
+                catch (error) {
+                    lastError = error;
+                    if (attempt < downloadAttempts) {
+                        core.debug(`Retrying download from ${url}`);
+                    }
                 }
             }
         }

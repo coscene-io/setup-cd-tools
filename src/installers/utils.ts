@@ -3,13 +3,20 @@ import * as tc from '@actions/tool-cache';
 import * as os from 'os';
 import * as fs from 'fs';
 import * as path from 'path';
+import { OutgoingHttpHeaders } from 'http';
 
 const downloadAttempts = 2;
+export type DownloadUrl =
+  | string
+  | {
+      headers?: OutgoingHttpHeaders;
+      url: string;
+    };
 
 export async function getBinary(
   toolName: string,
   version: string,
-  url: string,
+  url: DownloadUrl | DownloadUrl[],
 ): Promise<string> {
   let cachedToolpath: string;
   cachedToolpath = tc.find(toolName, version);
@@ -19,7 +26,7 @@ export async function getBinary(
 
     let downloadPath: string | null = null;
     try {
-      downloadPath = await downloadToolWithRetries(url);
+      downloadPath = (await downloadToolWithRetries(url)).downloadPath;
     } catch (error) {
       throw `Failed to download version ${version}: ${error}`;
     }
@@ -45,7 +52,7 @@ export async function getBinary(
 export async function getTarballBinary(
   toolName: string,
   version: string,
-  url: string,
+  url: DownloadUrl | DownloadUrl[],
   binaryPath: string = '',
 ): Promise<string> {
   let cachedToolpath: string;
@@ -55,14 +62,17 @@ export async function getTarballBinary(
     core.debug(`Downloading ${toolName} from: ${url}`);
 
     let downloadPath: string | null = null;
+    let downloadUrl: string;
     try {
-      downloadPath = await downloadToolWithRetries(url);
+      const download = await downloadToolWithRetries(url);
+      downloadPath = download.downloadPath;
+      downloadUrl = download.downloadUrl;
     } catch (error) {
       throw `Failed to download version ${version}: ${error}`;
     }
 
     let extPath: string;
-    if (url.includes('.zip')) {
+    if (downloadUrl.includes('.zip')) {
       extPath = await tc.extractZip(downloadPath);
     } else {
       extPath = await tc.extractTar(downloadPath);
@@ -93,17 +103,32 @@ export function getExecutableExtension(): string {
   return '';
 }
 
-async function downloadToolWithRetries(url: string): Promise<string> {
+async function downloadToolWithRetries(
+  urls: DownloadUrl | DownloadUrl[],
+): Promise<{ downloadPath: string; downloadUrl: string }> {
+  const downloadUrls = Array.isArray(urls) ? urls : [urls];
   let lastError: unknown;
 
-  for (let attempt = 1; attempt <= downloadAttempts; attempt++) {
-    try {
-      return await tc.downloadTool(url);
-    } catch (error) {
-      lastError = error;
+  for (const source of downloadUrls) {
+    const url = typeof source === 'string' ? source : source.url;
+    const headers = typeof source === 'string' ? undefined : source.headers;
 
-      if (attempt < downloadAttempts) {
-        core.debug(`Retrying download from ${url}`);
+    for (let attempt = 1; attempt <= downloadAttempts; attempt++) {
+      try {
+        const downloadPath = headers
+          ? await tc.downloadTool(url, undefined, undefined, headers)
+          : await tc.downloadTool(url);
+
+        return {
+          downloadPath,
+          downloadUrl: url,
+        };
+      } catch (error) {
+        lastError = error;
+
+        if (attempt < downloadAttempts) {
+          core.debug(`Retrying download from ${url}`);
+        }
       }
     }
   }

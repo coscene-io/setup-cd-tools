@@ -58,4 +58,24 @@ describe('installer download retries', () => {
       '2.14.2',
     );
   });
+
+  it('falls back to the next tarball URL after retries are exhausted', async () => {
+    (tc.downloadTool as jest.Mock)
+      .mockRejectedValueOnce(new Error('Unexpected HTTP response: 504'))
+      .mockRejectedValueOnce(new Error('Unexpected HTTP response: 504'))
+      .mockResolvedValueOnce('/tmp/fallback.tgz');
+
+    await getTarballBinary('kustomize', '3.5.4', [
+      'https://example.test/kustomize.tgz',
+      'https://fallback.example.test/kustomize.tgz',
+    ]);
+
+    expect(tc.downloadTool).toHaveBeenCalledWith(
+      'https://example.test/kustomize.tgz',
+    );
+    expect(tc.downloadTool).toHaveBeenCalledWith(
+      'https://fallback.example.test/kustomize.tgz',
+    );
+    expect(tc.extractTar).toHaveBeenCalledWith('/tmp/fallback.tgz');
+  });
 });
