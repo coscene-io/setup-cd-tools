@@ -1,4 +1,4 @@
-const io = require('@actions/io');
+const fs = require('fs/promises');
 const path = require('path');
 
 module.exports = async () => {
@@ -8,6 +8,6 @@ module.exports = async () => {
   process.env['RUNNER_TOOL_CACHE'] = toolDir;
   process.env['RUNNER_TEMP'] = tempDir;
 
-  await io.rmRF(toolDir);
-  await io.rmRF(tempDir);
+  await fs.rm(toolDir, { force: true, recursive: true });
+  await fs.rm(tempDir, { force: true, recursive: true });
 };
