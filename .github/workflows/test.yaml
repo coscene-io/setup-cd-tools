@@ -16,11 +16,14 @@ jobs:
         with:
           node-version: 24
 
+      - name: Enable corepack
+        run: corepack enable
+
       - name: Install
-        run: yarn install
+        run: pnpm install --frozen-lockfile
 
       - name: Lint
-        run: yarn format-check
+        run: pnpm format-check
 
       - name: Test
-        run: yarn test
+        run: pnpm test

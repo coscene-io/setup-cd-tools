@@ -1,6 +1,7 @@
 {
   "name": "setup-cd-tools",
   "version": "2.Y.Z",
+  "packageManager": "pnpm@10.6.5",
   "main": "dist/index.js",
   "license": "MIT",
   "author": "coscene.io",
