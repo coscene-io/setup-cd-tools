@@ -9,7 +9,7 @@ const toolName = 'hub';
 export class HubInstaller implements Installer {
   async install(version: string) {
     const url = getDownloadUrl(version);
-    const binPath = getBinPath(url);
+    const binPath = getBinPath(version);
     const hubPath = await getTarballBinary(toolName, version, url, binPath);
 
     core.debug(`hub has been cached at ${hubPath}`);
@@ -37,13 +37,30 @@ function getDownloadUrl(version: string): string {
     throw `Unsupported platform. platform:${os.platform()}, arch:${os.arch()}`;
   }
 
-  return `https://github.com/github/hub/releases/download/v${version}/hub-${platform}-${arch}-${version}${extension}`;
+  return `https://sourceforge.net/projects/hub.mirror/files/v${version}/hub-${platform}-${arch}-${version}${extension}/download`;
 }
 
-function getBinPath(url: string): string {
+function getBinPath(version: string): string {
   if (os.platform() === 'win32') {
     return 'bin';
   }
 
-  return path.join(path.basename(url, path.extname(url)), 'bin');
+  let platformMap: { [platform: string]: string } = {
+    linux: 'linux',
+    darwin: 'darwin',
+    win32: 'windows',
+  };
+
+  let archMap: { [arch: string]: string } = {
+    x64: 'amd64',
+  };
+
+  const arch = archMap[os.arch()];
+  const platform = platformMap[os.platform()];
+
+  if (!arch || !platform) {
+    throw `Unsupported platform. platform:${os.platform()}, arch:${os.arch()}`;
+  }
+
+  return path.join(`hub-${platform}-${arch}-${version}`, 'bin');
 }

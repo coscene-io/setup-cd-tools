@@ -9,6 +9,7 @@ jest.mock('@actions/tool-cache', () => ({
   cacheFile: jest.fn().mockResolvedValue('/tmp/cache'),
   downloadTool: jest.fn(),
   extractTar: jest.fn().mockResolvedValue('/tmp/extracted'),
+  extractZip: jest.fn().mockResolvedValue('/tmp/extracted-zip'),
   find: jest.fn().mockReturnValue(''),
 }));
 
@@ -22,6 +23,7 @@ describe('installer download retries', () => {
     jest.clearAllMocks();
     (tc.find as jest.Mock).mockReturnValue('');
     (tc.extractTar as jest.Mock).mockResolvedValue('/tmp/extracted');
+    (tc.extractZip as jest.Mock).mockResolvedValue('/tmp/extracted-zip');
     (tc.cacheFile as jest.Mock).mockResolvedValue('/tmp/cache');
   });
 
@@ -36,6 +38,21 @@ describe('installer download retries', () => {
     expect(tc.extractTar).toHaveBeenCalledWith('/tmp/download.tgz');
     expect(tc.cacheFile).toHaveBeenCalledWith(
       '/tmp/extracted/hub',
+      'hub',
+      'hub',
+      '2.14.2',
+    );
+  });
+
+  it('extracts zip downloads with the zip extractor', async () => {
+    (tc.downloadTool as jest.Mock).mockResolvedValueOnce('/tmp/download.zip');
+
+    await getTarballBinary('hub', '2.14.2', 'https://example.test/hub.zip');
+
+    expect(tc.extractZip).toHaveBeenCalledWith('/tmp/download.zip');
+    expect(tc.extractTar).not.toHaveBeenCalled();
+    expect(tc.cacheFile).toHaveBeenCalledWith(
+      '/tmp/extracted-zip/hub',
       'hub',
       'hub',
       '2.14.2',

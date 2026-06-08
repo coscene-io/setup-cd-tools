@@ -28439,7 +28439,7 @@ class HubInstaller {
     install(version) {
         return __awaiter(this, void 0, void 0, function* () {
             const url = getDownloadUrl(version);
-            const binPath = getBinPath(url);
+            const binPath = getBinPath(version);
             const hubPath = yield (0, utils_1.getTarballBinary)(toolName, version, url, binPath);
             core.debug(`hub has been cached at ${hubPath}`);
             core.addPath(path.dirname(hubPath));
@@ -28462,13 +28462,26 @@ function getDownloadUrl(version) {
     if (!arch || !platform) {
         throw `Unsupported platform. platform:${os.platform()}, arch:${os.arch()}`;
     }
-    return `https://github.com/github/hub/releases/download/v${version}/hub-${platform}-${arch}-${version}${extension}`;
+    return `https://sourceforge.net/projects/hub.mirror/files/v${version}/hub-${platform}-${arch}-${version}${extension}/download`;
 }
-function getBinPath(url) {
+function getBinPath(version) {
     if (os.platform() === 'win32') {
         return 'bin';
     }
-    return path.join(path.basename(url, path.extname(url)), 'bin');
+    let platformMap = {
+        linux: 'linux',
+        darwin: 'darwin',
+        win32: 'windows',
+    };
+    let archMap = {
+        x64: 'amd64',
+    };
+    const arch = archMap[os.arch()];
+    const platform = platformMap[os.platform()];
+    if (!arch || !platform) {
+        throw `Unsupported platform. platform:${os.platform()}, arch:${os.arch()}`;
+    }
+    return path.join(`hub-${platform}-${arch}-${version}`, 'bin');
 }
 
 
@@ -28921,7 +28934,7 @@ function getTarballBinary(toolName_1, version_1, url_1) {
                 throw `Failed to download version ${version}: ${error}`;
             }
             let extPath;
-            if (path.extname(url) === 'zip') {
+            if (url.includes('.zip')) {
                 extPath = yield tc.extractZip(downloadPath);
             }
             else {
@@ -29041,7 +29054,7 @@ function getDownloadUrl(version) {
     if (!arch || !platform) {
         throw `Unsupported platform. platform:${os.platform()}, arch:${os.arch()}`;
     }
-    return `https://github.com/mikefarah/yq/releases/download/${version}/yq_${platform}_${arch}${extension}`;
+    return `https://sourceforge.net/projects/yq-yq.mirror/files/v${version}/yq_${platform}_${arch}${extension}/download`;
 }
 
 

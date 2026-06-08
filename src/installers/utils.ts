@@ -62,7 +62,7 @@ export async function getTarballBinary(
     }
 
     let extPath: string;
-    if (path.extname(url) === 'zip') {
+    if (url.includes('.zip')) {
       extPath = await tc.extractZip(downloadPath);
     } else {
       extPath = await tc.extractTar(downloadPath);
