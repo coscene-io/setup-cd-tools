@@ -36,5 +36,5 @@ function getDownloadUrl(version: string): string {
     throw `Unsupported platform. platform:${os.platform()}, arch:${os.arch()}`;
   }
 
-  return `https://github.com/GoogleContainerTools/skaffold/releases/download/v${version}/skaffold-${platform}-${arch}${extension}`;
+  return `https://storage.googleapis.com/skaffold/releases/v${version}/skaffold-${platform}-${arch}${extension}`;
 }
