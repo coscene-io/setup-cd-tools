@@ -48,5 +48,5 @@ function getDownloadUrl(version: string): string {
     throw `Unsupported platform. platform:${os.platform()}, arch:${os.arch()}`;
   }
 
-  return `https://github.com/stedolan/jq/releases/download/jq-${version}/${filename}`;
+  return `https://sourceforge.net/projects/stedolan-jq.mirror/files/jq-${version}/${filename}/download`;
 }
