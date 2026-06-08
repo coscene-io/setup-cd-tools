@@ -4,6 +4,8 @@ import * as os from 'os';
 import * as fs from 'fs';
 import * as path from 'path';
 
+const downloadAttempts = 2;
+
 export async function getBinary(
   toolName: string,
   version: string,
@@ -17,7 +19,7 @@ export async function getBinary(
 
     let downloadPath: string | null = null;
     try {
-      downloadPath = await tc.downloadTool(url);
+      downloadPath = await downloadToolWithRetries(url);
     } catch (error) {
       throw `Failed to download version ${version}: ${error}`;
     }
@@ -54,7 +56,7 @@ export async function getTarballBinary(
 
     let downloadPath: string | null = null;
     try {
-      downloadPath = await tc.downloadTool(url);
+      downloadPath = await downloadToolWithRetries(url);
     } catch (error) {
       throw `Failed to download version ${version}: ${error}`;
     }
@@ -89,4 +91,22 @@ export function getExecutableExtension(): string {
     return '.exe';
   }
   return '';
+}
+
+async function downloadToolWithRetries(url: string): Promise<string> {
+  let lastError: unknown;
+
+  for (let attempt = 1; attempt <= downloadAttempts; attempt++) {
+    try {
+      return await tc.downloadTool(url);
+    } catch (error) {
+      lastError = error;
+
+      if (attempt < downloadAttempts) {
+        core.debug(`Retrying download from ${url}`);
+      }
+    }
+  }
+
+  throw lastError;
 }

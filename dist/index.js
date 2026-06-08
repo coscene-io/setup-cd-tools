@@ -28886,6 +28886,7 @@ const tc = __importStar(__nccwpck_require__(3472));
 const os = __importStar(__nccwpck_require__(857));
 const fs = __importStar(__nccwpck_require__(9896));
 const path = __importStar(__nccwpck_require__(6928));
+const downloadAttempts = 2;
 function getBinary(toolName, version, url) {
     return __awaiter(this, void 0, void 0, function* () {
         let cachedToolpath;
@@ -28894,7 +28895,7 @@ function getBinary(toolName, version, url) {
             core.debug(`Downloading ${toolName} from: ${url}`);
             let downloadPath = null;
             try {
-                downloadPath = yield tc.downloadTool(url);
+                downloadPath = yield downloadToolWithRetries(url);
             }
             catch (error) {
                 throw `Failed to download version ${version}: ${error}`;
@@ -28914,7 +28915,7 @@ function getTarballBinary(toolName_1, version_1, url_1) {
             core.debug(`Downloading ${toolName} from: ${url}`);
             let downloadPath = null;
             try {
-                downloadPath = yield tc.downloadTool(url);
+                downloadPath = yield downloadToolWithRetries(url);
             }
             catch (error) {
                 throw `Failed to download version ${version}: ${error}`;
@@ -28938,6 +28939,23 @@ function getExecutableExtension() {
         return '.exe';
     }
     return '';
+}
+function downloadToolWithRetries(url) {
+    return __awaiter(this, void 0, void 0, function* () {
+        let lastError;
+        for (let attempt = 1; attempt <= downloadAttempts; attempt++) {
+            try {
+                return yield tc.downloadTool(url);
+            }
+            catch (error) {
+                lastError = error;
+                if (attempt < downloadAttempts) {
+                    core.debug(`Retrying download from ${url}`);
+                }
+            }
+        }
+        throw lastError;
+    });
 }
 
 
